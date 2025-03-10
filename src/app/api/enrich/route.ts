@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/mongodb"
-import { ProductRepository } from "@/infrastructure/repositories/mongodb/product-repository"
-import { AttributeRepository } from "@/infrastructure/repositories/mongodb/attribute-repository"
-import { EnrichmentService } from "@/infrastructure/ai/enrichment-service"
+import { connectToDatabase } from "@/app/lib/mongodb"
+import { ProductRepository } from "@/app/infrastructure/repositories/mongodb/product-repository"
+import { AttributeRepository } from "@/app/infrastructure/repositories/mongodb/attribute-repository"
+import { EnrichmentService } from "@/app/infrastructure/ai/enrichment-service"
 import { ObjectId } from "mongodb"
 
-export const runtime = "edge"
+export const runtime = "nodejs"
 
 export async function POST(request: NextRequest) {
   try {

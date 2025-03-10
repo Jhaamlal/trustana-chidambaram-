@@ -18,25 +18,36 @@ export async function processCSVFile(
       columns: true,
       skip_empty_lines: true,
       trim: true,
+      relax_quotes: true,
+      relax_column_count: true,
     })
 
     // Transform CSV records to product objects
     const products: Omit<Product, "_id">[] = records.map((record: any) => {
       // Extract basic product information
       const product: Omit<Product, "_id"> = {
-        name: record.name || record.product_name || record.title || "",
-        brand: record.brand || "",
-        barcode: record.barcode || record.sku || record.product_code || "",
+        name:
+          record["Product Name"] ||
+          record.name ||
+          record.product_name ||
+          record.title ||
+          "",
+        brand: record.Brand || record.brand || "",
+        barcode:
+          record.Barcode ||
+          record.barcode ||
+          record.sku ||
+          record.product_code ||
+          "",
         images: [],
         importedAt: new Date(), // Set import date to current time
         enriched: false, // New products start as not enriched
       }
 
       // Handle images (could be comma-separated URLs)
-      if (record.images) {
-        product.images = record.images
-          .split(",")
-          .map((url: string) => url.trim())
+      if (record.Images || record.images) {
+        const imageField = record.Images || record.images
+        product.images = imageField.split(",").map((url: string) => url.trim())
       } else if (record.image) {
         product.images = [record.image.trim()]
       }
@@ -47,13 +58,17 @@ export async function processCSVFile(
         // Skip the basic fields we've already processed
         if (
           [
+            "Product Name",
             "name",
             "product_name",
             "title",
+            "Brand",
             "brand",
+            "Barcode",
             "barcode",
             "sku",
             "product_code",
+            "Images",
             "images",
             "image",
           ].includes(key)

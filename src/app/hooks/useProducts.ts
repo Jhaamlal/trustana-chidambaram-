@@ -1,105 +1,64 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { Product } from "@/app/types/product"
 
-export function useImport() {
-  const [isImporting, setIsImporting] = useState(false)
+interface UseProductsProps {
+  page: number
+  limit: number
+  sortField: string
+  sortOrder: string
+  filters: Record<string, any>
+}
 
-  const uploadFile = async (
-    file: File,
-    onProgress: (progress: number) => void
-  ) => {
-    setIsImporting(true)
+export function useProducts({
+  page,
+  limit,
+  sortField,
+  sortOrder,
+  filters,
+}: UseProductsProps) {
+  const [products, setProducts] = useState<Product[]>([])
+  const [pagination, setPagination] = useState({
+    page,
+    limit,
+    total: 0,
+    pages: 0,
+  })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-    try {
-      // Create FormData for file upload
-      const formData = new FormData()
-      formData.append("file", file)
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true)
+      setError(null)
 
-      // Track upload progress
-      const xhr = new XMLHttpRequest()
+      try {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString(),
+          sortField,
+          sortOrder,
+          filters: JSON.stringify(filters),
+        })
 
-      xhr.upload.addEventListener("progress", (event) => {
-        if (event.lengthComputable) {
-          const progress = Math.round((event.loaded / event.total) * 100)
-          onProgress(progress)
+        const response = await fetch(`/api/products?${params.toString()}`)
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch products")
         }
-      })
 
-      // Upload the file directly
-      return new Promise<{ blobUrl: string }>((resolve, reject) => {
-        xhr.addEventListener("load", () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const response = JSON.parse(xhr.responseText)
-              resolve({ blobUrl: response.blobUrl })
-            } catch (err) {
-              console.log(err)
-              reject(new Error("Invalid response format"))
-            }
-          } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`))
-          }
-        })
-
-        xhr.addEventListener("error", () => {
-          reject(new Error("Upload failed"))
-        })
-
-        xhr.open("POST", "/api/import/upload")
-        xhr.send(formData)
-      })
-    } catch (error: any) {
-      throw new Error(error.message || "File upload failed")
-    } finally {
-      setIsImporting(false)
-    }
-  }
-
-  const processFile = async (
-    fileUrl: string,
-    fileType: string,
-    onProgress: (progress: number) => void
-  ) => {
-    try {
-      // Start with 0% progress
-      onProgress(0)
-
-      // Process the file on the server
-      const response = await fetch("/api/import/process", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fileUrl,
-          fileType,
-        }),
-      })
-
-      // Simulate progress updates while processing
-      let currentProgress = 0
-      const progressInterval = setInterval(() => {
-        const increment = Math.random() * 10
-        currentProgress += increment
-        if (currentProgress > 95) currentProgress = 95
-        onProgress(currentProgress)
-      }, 1000)
-
-      const result = await response.json()
-
-      clearInterval(progressInterval)
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to process file")
+        setProducts(data.products)
+        setPagination(data.pagination)
+      } catch (err: any) {
+        setError(err.message || "An error occurred while fetching products")
+        console.error("Error fetching products:", err)
+      } finally {
+        setLoading(false)
       }
-
-      // Complete the progress
-      onProgress(100)
-
-      return result
-    } catch (error: any) {
-      throw new Error(error.message || "File processing failed")
     }
-  }
 
-  return { uploadFile, processFile, isImporting }
+    fetchProducts()
+  }, [page, limit, sortField, sortOrder, filters])
+
+  return { products, pagination, loading, error }
 }

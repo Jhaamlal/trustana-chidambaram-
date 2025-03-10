@@ -99,6 +99,7 @@ export default function ProductsPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Products</h1>
         <div className="flex space-x-4">
+          {/* Hello there */}
           <EnrichmentButton
             selectedProducts={selectedProducts}
             onEnrichmentComplete={handleEnrichmentComplete}

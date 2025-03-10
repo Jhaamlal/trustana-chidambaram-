@@ -4,7 +4,7 @@ import { ProductRepository } from "@/app/infrastructure/repositories/mongodb/pro
 import { processCSVFile } from "@/app/lib/file-processors/csv-processor"
 import { processExcelFile } from "@/app/lib/file-processors/excel-processor"
 
-export const runtime = "edge"
+export const runtime = "nodejs"
 
 export async function POST(request: NextRequest) {
   try {

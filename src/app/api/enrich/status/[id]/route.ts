@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/app/lib/mongodb"
 import { EnrichmentService } from "@/app/infrastructure/ai/enrichment-service"
 
-export const runtime = "edge"
+export const runtime = "nodejs"
 
 export async function GET(
   request: NextRequest,

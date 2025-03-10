@@ -1,7 +1,6 @@
 import { Db } from "mongodb"
 import { Product } from "@/app/types/product"
 import { Attribute } from "@/app/types/attribute"
-// import { EnrichmentResult } from "@/app/types/enrichment"
 import { ProductRepository } from "../repositories/mongodb/product-repository"
 import { EnrichmentRepository } from "../repositories/mongodb/enrichment-repository"
 
