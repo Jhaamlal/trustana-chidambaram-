@@ -25,7 +25,7 @@ export class EnrichmentService {
     this.productRepository = new ProductRepository(db)
     this.enrichmentRepository = new EnrichmentRepository(db)
     this.vectorSearch = new MongoDBVectorSearch(db)
-    this.embeddingService = new EmbeddingService()
+    this.embeddingService = new EmbeddingService(db)
     this.ragChain = new RAGChain()
   }
 

@@ -1,10 +1,12 @@
 export class EmbeddingService {
   private apiKey: string
   private model: string
+  private db: any
 
-  constructor() {
+  constructor(db: any) {
     this.apiKey = process.env.OPENAI_API_KEY || ""
     this.model = "text-embedding-3-small"
+    this.db = db
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
@@ -36,9 +38,11 @@ export class EmbeddingService {
       return data.data[0].embedding
     } catch (error) {
       console.error("Error generating embedding:", error)
-
-      // Return a zero vector as fallback (not ideal but prevents system failure)
       return Array(1536).fill(0)
     }
   }
+}
+
+export function createEmbeddingService(db: any) {
+  return new EmbeddingService(db)
 }

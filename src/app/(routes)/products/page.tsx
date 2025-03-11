@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import ProductList from "@/app/components/products/ProductList"
 import ProductFilters from "@/app/components/products/ProductFilters"
 import EnrichmentButton from "@/app/components/products/EnrichmentButton"
 import { useProducts } from "@/app/hooks/useProducts"
 import { useAttributes } from "@/app/hooks/useAttributes"
+import { useProductSearch } from "@/app/hooks/useProductSearch"
 
 export default function ProductsPage() {
   const router = useRouter()
@@ -21,6 +22,7 @@ export default function ProductsPage() {
   const [filters, setFilters] = useState<Record<string, any>>(
     filtersParam ? JSON.parse(filtersParam) : {}
   )
+  const [displayedProducts, setDisplayedProducts] = useState<any[]>([])
 
   const { products, pagination, loading, error } = useProducts({
     page,
@@ -30,10 +32,35 @@ export default function ProductsPage() {
     filters,
   })
 
+  const { searchProducts, isSearching } = useProductSearch()
   const { attributes, loading: attributesLoading } = useAttributes()
 
-  const handleFilterChange = (newFilters: Record<string, any>) => {
+  // Set displayed products when products change
+  useEffect(() => {
+    setDisplayedProducts(products)
+  }, [products])
+
+  const handleFilterChange = async (newFilters: Record<string, any>) => {
     setFilters(newFilters)
+
+    // Check if there's a search query
+    if (newFilters._search) {
+      try {
+        // Use vector search with filters
+        const searchResults = await searchProducts(
+          newFilters._search,
+          // Remove _search from filters sent to API
+          Object.fromEntries(
+            Object.entries(newFilters).filter(([key]) => key !== "_search")
+          )
+        )
+
+        // Update displayed products with search results
+        setDisplayedProducts(searchResults)
+      } catch (error) {
+        console.error("Search error:", error)
+      }
+    }
 
     // Update URL with new filters
     const params = new URLSearchParams()
@@ -81,7 +108,7 @@ export default function ProductsPage() {
 
   const handleSelectAll = (selected: boolean) => {
     if (selected) {
-      setSelectedProducts(products.map((product) => product._id))
+      setSelectedProducts(displayedProducts.map((product) => product._id))
     } else {
       setSelectedProducts([])
     }
@@ -99,7 +126,6 @@ export default function ProductsPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Products</h1>
         <div className="flex space-x-4">
-          {/* Hello there */}
           <EnrichmentButton
             selectedProducts={selectedProducts}
             onEnrichmentComplete={handleEnrichmentComplete}
@@ -120,10 +146,10 @@ export default function ProductsPage() {
 
       <div className="card">
         <ProductList
-          products={products}
+          products={filters._search ? displayedProducts : products}
           attributes={attributes}
           pagination={pagination}
-          loading={loading}
+          loading={loading || isSearching}
           error={error}
           sortField={sortField}
           sortOrder={sortOrder}

@@ -18,10 +18,12 @@ export default function ProductFilters({
   loading,
 }: ProductFiltersProps) {
   const [localFilters, setLocalFilters] = useState<Record<string, any>>(filters)
+  const [searchQuery, setSearchQuery] = useState<string>(filters._search || "")
 
   // Update local filters when props change
   useEffect(() => {
     setLocalFilters(filters)
+    setSearchQuery(filters._search || "")
   }, [filters])
 
   const handleFilterChange = (attributeName: string, value: any) => {
@@ -30,7 +32,6 @@ export default function ProductFilters({
       [attributeName]: value,
     }
 
-    // Remove empty filters
     if (
       value === "" ||
       value === null ||
@@ -43,12 +44,28 @@ export default function ProductFilters({
     setLocalFilters(newFilters)
   }
 
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+  }
+
   const handleApplyFilters = () => {
-    onFilterChange(localFilters)
+    // Include search query in filters if provided
+    const filtersWithSearch = {
+      ...localFilters,
+    }
+
+    if (searchQuery) {
+      filtersWithSearch._search = searchQuery
+    } else if (filtersWithSearch._search) {
+      delete filtersWithSearch._search
+    }
+
+    onFilterChange(filtersWithSearch)
   }
 
   const handleClearFilters = () => {
     setLocalFilters({})
+    setSearchQuery("")
     onFilterChange({})
   }
 
@@ -179,6 +196,25 @@ export default function ProductFilters({
         </div>
       ) : (
         <>
+          {/* Vector Search Input */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-1">
+              Search Products
+            </label>
+            <div className="flex">
+              <Input
+                type="text"
+                placeholder="Search for products by description..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="flex-grow"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Use natural language to find similar products
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             {attributes.map((attribute) => (
               <div key={attribute._id} className="mb-4">

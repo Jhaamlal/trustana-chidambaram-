@@ -287,6 +287,116 @@ export class ProductRepository {
 
     return count > 0
   }
+  async searchProductsWithVector(
+    embedding: number[],
+    filters: Record<string, any> = {},
+    limit: number = 20
+  ): Promise<Product[]> {
+    // Build filter conditions
+    const filterConditions: any[] = []
+
+    for (const [key, value] of Object.entries(filters)) {
+      if (value !== undefined && value !== null && value !== "") {
+        if (Array.isArray(value)) {
+          filterConditions.push({
+            attr: {
+              $elemMatch: {
+                k: key,
+                v: { $in: value },
+              },
+            },
+          })
+        } else if (
+          typeof value === "object" &&
+          (value.min !== undefined || value.max !== undefined)
+        ) {
+          const rangeCondition: any = { k: key }
+          if (value.min !== undefined) {
+            rangeCondition.v = { ...(rangeCondition.v || {}), $gte: value.min }
+          }
+          if (value.max !== undefined) {
+            rangeCondition.v = { ...(rangeCondition.v || {}), $lte: value.max }
+          }
+          filterConditions.push({
+            attr: { $elemMatch: rangeCondition },
+          })
+        } else {
+          filterConditions.push({
+            attr: {
+              $elemMatch: {
+                k: key,
+                v: value,
+              },
+            },
+          })
+        }
+      }
+    }
+
+    // Create vector search pipeline
+    const pipeline: any[] = [
+      {
+        $vectorSearch: {
+          index: "product_vector_index",
+          path: "description_embedding",
+          queryVector: embedding,
+          numCandidates: 100,
+          limit: limit * 2, // Request more candidates to allow for filtering
+        },
+      },
+    ]
+
+    // Add filter if conditions exist
+    if (filterConditions.length > 0) {
+      pipeline.push({
+        $match: { $and: filterConditions },
+      })
+    }
+
+    // Add projection and limit
+    pipeline.push(
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          brand: 1,
+          barcode: 1,
+          images: 1,
+          attr: 1,
+          score: { $meta: "vectorSearchScore" },
+        },
+      },
+      { $limit: limit }
+    )
+
+    try {
+      const results = await this.db
+        .collection(this.collection)
+        .aggregate(pipeline)
+        .toArray()
+
+      return results.map((doc) => this.mapToProduct(doc))
+    } catch (error) {
+      console.error("Vector search error:", error)
+      // Fallback to regular search
+      return this.listProducts({
+        page: 1,
+        limit,
+        sortField: "name",
+        sortOrder: "asc",
+        filters,
+      })
+    }
+  }
+
+  async getRecentlyImportedProducts(limit: number): Promise<Product[]> {
+    return (await this.db
+      .collection(this.collection)
+      .find({})
+      .sort({ importedAt: -1 })
+      .limit(limit)
+      .toArray()) as unknown as Product[]
+  }
 
   // Helper method to convert MongoDB document to Product type
   private mapToProduct(doc: Document): Product {
@@ -311,3 +421,5 @@ export class ProductRepository {
     }
   }
 }
+
+// src/app/repositories/product-repository.ts
