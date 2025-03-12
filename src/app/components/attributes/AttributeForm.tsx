@@ -33,7 +33,7 @@ export default function AttributeForm({
   const [newOption, setNewOption] = useState("")
   const [newUnit, setNewUnit] = useState("")
 
-  // Load initial values if editing
+  // Load initial values if editing we are editing the value
   useEffect(() => {
     if (initialValues) {
       setName(initialValues.name)
@@ -48,7 +48,7 @@ export default function AttributeForm({
     }
   }, [initialValues])
 
-  // Attribute type options
+  // Attribute type options, Which is there
   const typeOptions = [
     { value: "short_text", label: "Short Text" },
     { value: "long_text", label: "Long Text" },
@@ -108,7 +108,7 @@ export default function AttributeForm({
       const attributeData: Omit<Attribute, "_id"> = {
         name,
         displayName,
-        type: type as AttributeType, // Type assertion here
+        type: type as AttributeType,
         description,
         required,
         searchable,
@@ -122,7 +122,6 @@ export default function AttributeForm({
         updatedAt: new Date(),
       }
 
-      // Submit the form
       await onSubmit(attributeData)
     } catch (err: any) {
       setError(err.message || "An error occurred while saving the attribute")
@@ -145,7 +144,7 @@ export default function AttributeForm({
           label="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          disabled={isEditing} // Name cannot be changed when editing
+          disabled={isEditing}
           helperText="Unique identifier for the attribute (cannot be changed later)"
           required
         />

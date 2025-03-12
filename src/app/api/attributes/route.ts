@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create attribute
+    // Create new attribute
     const attribute = await attributeRepository.createAttribute({
       ...data,
       createdAt: new Date(),

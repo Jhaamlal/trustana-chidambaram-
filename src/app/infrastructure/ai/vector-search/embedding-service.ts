@@ -9,6 +9,8 @@ export class EmbeddingService {
     this.db = db
   }
 
+  // Here we are passing the ,data create vector embedding ,using OPEN AI, it will
+  // take some time, I can have used some trigger not to that need not to refresh ,but will do BAAD ME
   async generateEmbedding(text: string): Promise<number[]> {
     try {
       if (!this.apiKey) {

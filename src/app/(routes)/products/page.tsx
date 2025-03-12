@@ -35,7 +35,6 @@ export default function ProductsPage() {
   const { searchProducts, isSearching } = useProductSearch()
   const { attributes, loading: attributesLoading } = useAttributes()
 
-  // Set displayed products when products change
   useEffect(() => {
     setDisplayedProducts(products)
   }, [products])
@@ -62,9 +61,8 @@ export default function ProductsPage() {
       }
     }
 
-    // Update URL with new filters
     const params = new URLSearchParams()
-    params.set("page", "1") // Reset to first page
+    params.set("page", "1")
     params.set("limit", limit.toString())
     params.set("sortField", sortField)
     params.set("sortOrder", sortOrder)
@@ -117,7 +115,6 @@ export default function ProductsPage() {
   const handleEnrichmentComplete = () => {
     // Refresh the product list
     router.refresh()
-    // Clear selection
     setSelectedProducts([])
   }
 

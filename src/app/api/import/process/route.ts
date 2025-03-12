@@ -33,7 +33,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate the processed data
     if (!products || !Array.isArray(products) || products.length === 0) {
       return NextResponse.json(
         { error: "No valid products found in the file" },

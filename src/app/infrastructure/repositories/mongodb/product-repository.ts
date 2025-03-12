@@ -70,7 +70,7 @@ export class ProductRepository {
     const { page, limit, sortField, sortOrder, filters } = options
     const skip = (page - 1) * limit
 
-    // Build filter query
+    //  filter query
     const query: any = {}
 
     // Process attribute filters
@@ -187,7 +187,7 @@ export class ProductRepository {
   }
 
   async countProducts(filters: Record<string, any> = {}): Promise<number> {
-    // Build filter query similar to listProducts
+    // filter query
     const query: any = {}
 
     if (Object.keys(filters).length > 0) {
@@ -292,7 +292,7 @@ export class ProductRepository {
     filters: Record<string, any> = {},
     limit: number = 20
   ): Promise<Product[]> {
-    // Build filter conditions
+    //  filter conditions
     const filterConditions: any[] = []
 
     for (const [key, value] of Object.entries(filters)) {
@@ -341,7 +341,7 @@ export class ProductRepository {
           path: "description_embedding",
           queryVector: embedding,
           numCandidates: 100,
-          limit: limit * 2, // Request more candidates to allow for filtering
+          limit: limit * 2,
         },
       },
     ]
@@ -398,9 +398,8 @@ export class ProductRepository {
       .toArray()) as unknown as Product[]
   }
 
-  // Helper method to convert MongoDB document to Product type
+  //  convert MongoDB document to Product type
   private mapToProduct(doc: Document): Product {
-    // Handle both WithId<Document> and regular Document
     const id = doc._id
       ? typeof doc._id === "string"
         ? doc._id
@@ -421,5 +420,3 @@ export class ProductRepository {
     }
   }
 }
-
-// src/app/repositories/product-repository.ts

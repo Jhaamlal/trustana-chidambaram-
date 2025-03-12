@@ -24,7 +24,6 @@ export async function processCSVFile(
 
     // Transform CSV records to product objects
     const products: Omit<Product, "_id">[] = records.map((record: any) => {
-      // Extract basic product information
       const product: Omit<Product, "_id"> = {
         name:
           record["Product Name"] ||
@@ -40,8 +39,8 @@ export async function processCSVFile(
           record.product_code ||
           "",
         images: [],
-        importedAt: new Date(), // Set import date to current time
-        enriched: false, // New products start as not enriched
+        importedAt: new Date(),
+        enriched: false,
       }
 
       // Handle images (could be comma-separated URLs)
@@ -81,7 +80,7 @@ export async function processCSVFile(
           continue
         }
 
-        // Check if it's a measure with unit (e.g., "100 USD")
+        // Check if it's a measure with unit (e.g., "100 USD") to handle the error
         const measureMatch = String(value).match(
           /^(\d+(?:\.\d+)?)\s+([a-zA-Z]+)$/
         )

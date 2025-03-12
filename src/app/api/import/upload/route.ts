@@ -14,10 +14,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
-    // Generate a unique filename to prevent collisions
     const uniqueFilename = `${nanoid()}-${file.name}`
 
-    // Upload the file directly to Vercel Blob
     const blob = await put(uniqueFilename, file, {
       access: "public",
       contentType: file.type,

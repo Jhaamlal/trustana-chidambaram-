@@ -93,7 +93,7 @@ export function useAttributes() {
           throw new Error(data.error || "Failed to update attribute")
         }
 
-        fetchAttributes() // Refresh the list
+        fetchAttributes()
         return data
       } catch (err: any) {
         throw new Error(
@@ -116,7 +116,7 @@ export function useAttributes() {
           throw new Error(data.error || "Failed to delete attribute")
         }
 
-        fetchAttributes() // Refresh the list
+        fetchAttributes()
       } catch (err: any) {
         throw new Error(
           err.message || "An error occurred while deleting attribute"

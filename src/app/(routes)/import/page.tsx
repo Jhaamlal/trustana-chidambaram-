@@ -26,7 +26,7 @@ export default function ImportPage() {
     setImportResult(null)
 
     try {
-      // Determine file type from extension
+      // Determine file type from extension ,if that file extension is not what we want in that case it will raise the error
       const fileType = file.name.split(".").pop()?.toLowerCase()
       if (!fileType || !["csv", "xlsx", "xls"].includes(fileType)) {
         throw new Error(

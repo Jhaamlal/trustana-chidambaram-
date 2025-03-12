@@ -18,7 +18,6 @@ export async function GET(
     const client = await connectToDatabase()
     const enrichmentService = new EnrichmentService(client)
 
-    // Get job status
     const status = await enrichmentService.getJobStatus(jobId)
 
     if (!status) {

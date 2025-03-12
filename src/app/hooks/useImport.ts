@@ -1,4 +1,5 @@
 import { useState } from "react"
+import axios from "axios"
 
 export function useImport() {
   const [isImporting, setIsImporting] = useState(false)
@@ -14,43 +15,27 @@ export function useImport() {
       const formData = new FormData()
       formData.append("file", file)
 
-      // Track upload progress
-      const xhr = new XMLHttpRequest()
-
-      xhr.upload.addEventListener("progress", (event) => {
-        if (event.lengthComputable) {
-          const progress = Math.round((event.loaded / event.total) * 100)
-          onProgress(progress)
-        }
-      })
-
-      // Upload the file directly
-      return new Promise<{ blobUrl: string }>((resolve, reject) => {
-        xhr.addEventListener("load", () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const response = JSON.parse(xhr.responseText)
-              resolve({ blobUrl: response.blobUrl })
-            } catch (error) {
-              console.log("error", error)
-
-              reject(new Error("Invalid response format"))
-            }
-          } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`))
+      // Upload the file using axios with progress tracking
+      const response = await axios.post("/api/import/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = Math.round(
+              (progressEvent.loaded / progressEvent.total) * 100
+            )
+            onProgress(progress)
           }
-        })
-
-        xhr.addEventListener("error", () => {
-          reject(new Error("Upload failed"))
-        })
-
-        xhr.open("POST", "/api/import/upload")
-        // Don't set Content-Type header - browser will set it automatically with boundary
-        xhr.send(formData)
+        },
       })
+
+      // Return the response data
+      return { blobUrl: response.data.blobUrl }
     } catch (error: any) {
-      throw new Error(error.message || "File upload failed")
+      throw new Error(
+        error.response?.data?.message || error.message || "File upload failed"
+      )
     } finally {
       setIsImporting(false)
     }
@@ -66,15 +51,9 @@ export function useImport() {
       onProgress(0)
 
       // Process the file on the server
-      const response = await fetch("/api/import/process", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fileUrl,
-          fileType,
-        }),
+      const response = await axios.post("/api/import/process", {
+        fileUrl,
+        fileType,
       })
 
       // Simulate progress updates while processing
@@ -86,20 +65,18 @@ export function useImport() {
         onProgress(currentProgress)
       }, 1000)
 
-      const result = await response.json()
-
       clearInterval(progressInterval)
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to process file")
-      }
 
       // Complete the progress
       onProgress(100)
 
-      return result
+      return response.data
     } catch (error: any) {
-      throw new Error(error.message || "File processing failed")
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "File processing failed"
+      )
     }
   }
 
