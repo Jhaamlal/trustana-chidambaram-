@@ -15,16 +15,19 @@ export default function AttributesPage() {
   const handleDelete = async (attributeId: string) => {
     if (
       confirm(
-        "Are you sure you want to delete this attribute? This action cannot be undone."
+        "Are you sure you want to delete this attribute? This action will remove it from all products that use it."
       )
     ) {
       setDeleteInProgress(true)
       try {
+        console.log(`Attempting to delete attribute: ${attributeId}`)
         await deleteAttribute(attributeId)
+        console.log(`Attribute ${attributeId} deleted successfully`)
         router.refresh()
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error deleting attribute:", error)
-        alert("Failed to delete attribute. It may be in use by products.")
+        const errorMessage = error?.message || "Unknown error occurred"
+        alert(`Failed to delete attribute: ${errorMessage}`)
       } finally {
         setDeleteInProgress(false)
       }

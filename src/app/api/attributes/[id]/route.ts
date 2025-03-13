@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/app/lib/mongodb"
-import { AttributeRepository } from "@/app/infrastructure/repositories/mongodb/attribute-repository"
+import {
+  AttributeRepository,
+  createAttributeRepository,
+} from "@/app/infrastructure/repositories/mongodb/attribute-repository"
 import { ObjectId } from "mongodb"
 
-export const runtime = "edge"
+export const runtime = "nodejs"
 
 export async function GET(
   request: NextRequest,
@@ -88,39 +91,36 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  try {
-    const id = params.id
+  console.log(`API: Received DELETE request for attribute ID: ${params.id}`)
 
-    if (!ObjectId.isValid(id)) {
+  try {
+    if (!params.id || !ObjectId.isValid(params.id)) {
+      console.log(`API: Invalid attribute ID format: ${params.id}`)
       return NextResponse.json(
-        { error: "Invalid attribute ID" },
+        { error: "Invalid attribute ID format" },
         { status: 400 }
       )
     }
 
-    const client = await connectToDatabase()
-    const attributeRepository = new AttributeRepository(client)
-    const productRepository = await import(
-      "@/app/infrastructure/repositories/mongodb/product-repository"
-    ).then((module) => new module.ProductRepository(client))
+    console.log(`API: Creating attribute repository`)
+    const attributeRepository = await createAttributeRepository()
 
-    // Check if attribute is being used by any products
-    const isAttributeInUse = await productRepository.isAttributeInUse(id)
-    if (isAttributeInUse) {
-      return NextResponse.json(
-        { error: "Cannot delete attribute that is in use by products" },
-        { status: 409 }
-      )
-    }
+    console.log(`API: Calling deleteAttribute for ID: ${params.id}`)
+    await attributeRepository.deleteAttribute(params.id)
 
-    // Delete attribute
-    await attributeRepository.deleteAttribute(id)
-
+    console.log(`API: Successfully deleted attribute ID: ${params.id}`)
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error("Error deleting attribute:", error)
+    const errorMessage = error?.message || "Unknown error"
+    console.error(`API: Error deleting attribute: ${errorMessage}`, error)
+
     return NextResponse.json(
-      { error: "Failed to delete attribute", message: error.message },
+      {
+        error: "Failed to delete attribute",
+        message: errorMessage,
+        stack:
+          process.env.NODE_ENV === "development" ? error?.stack : undefined,
+      },
       { status: 500 }
     )
   }

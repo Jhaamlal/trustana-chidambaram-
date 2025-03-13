@@ -24,6 +24,14 @@ export async function processCSVFile(
 
     // Transform CSV records to product objects
     const products: Omit<Product, "_id">[] = records.map((record: any) => {
+      // Get the barcode value from various possible field names
+      const barcodeValue =
+        record.Barcode ||
+        record.barcode ||
+        record.sku ||
+        record.product_code ||
+        ""
+
       const product: Omit<Product, "_id"> = {
         name:
           record["Product Name"] ||
@@ -32,12 +40,8 @@ export async function processCSVFile(
           record.title ||
           "",
         brand: record.Brand || record.brand || "",
-        barcode:
-          record.Barcode ||
-          record.barcode ||
-          record.sku ||
-          record.product_code ||
-          "",
+        // Only set barcode if it's not an empty string
+        ...(barcodeValue.trim() !== "" ? { barcode: barcodeValue.trim() } : {}),
         images: [],
         importedAt: new Date(),
         enriched: false,

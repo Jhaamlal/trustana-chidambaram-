@@ -37,11 +37,13 @@ export class MongoDBVectorSearch {
         },
       ]
 
+      console.log("Executing vector search pipeline")
       const results = await this.db
         .collection(this.collection)
         .aggregate(pipeline)
         .toArray()
 
+      console.log(`Vector search found ${results.length} results`)
       return results as unknown as Product[]
     } catch (error) {
       // Fallback to regular search if vector search is not available
@@ -64,15 +66,25 @@ export class MongoDBVectorSearch {
     productId: string,
     embedding: number[]
   ): Promise<void> {
-    await this.db.collection(this.collection).updateOne(
-      { _id: new ObjectId(productId) },
-      {
-        $set: {
-          description_embedding: embedding,
-          vector_updated_at: new Date(),
-        },
-      }
+    console.log(
+      `Storing embedding for product ${productId}, dimensions: ${embedding.length}`
     )
+
+    try {
+      await this.db.collection(this.collection).updateOne(
+        { _id: new ObjectId(productId) },
+        {
+          $set: {
+            description_embedding: embedding,
+            vector_updated_at: new Date(),
+          },
+        }
+      )
+      console.log(`Successfully stored embedding for product ${productId}`)
+    } catch (error) {
+      console.error(`Error storing embedding for product ${productId}:`, error)
+      throw error
+    }
   }
 
   async createVectorSearchIndex(): Promise<void> {
@@ -84,28 +96,44 @@ export class MongoDBVectorSearch {
       )
 
       if (!hasVectorIndex) {
-        // Create vector search index
-        await this.db.command({
-          createIndexes: this.collection,
-          indexes: [
-            {
-              name: "product_vector_index",
-              key: {
-                description_embedding: "vector",
-              },
-              vectorOptions: {
-                type: "cosine",
-                dimensions: 1536, // OpenAI embedding dimensions
-                similarity: "cosine",
-              },
-            },
-          ],
-        })
+        console.log("Vector search index not found, attempting to create it...")
 
-        console.log("Vector search index created successfully")
+        try {
+          // Attempt to create vector search index using MongoDB command
+          // Note: This will only work for self-hosted MongoDB with vector search capabilities
+          // For MongoDB Atlas, the index must be created in the Atlas UI
+          await this.db.command({
+            createIndexes: this.collection,
+            indexes: [
+              {
+                name: "product_vector_index",
+                key: {
+                  description_embedding: "vector",
+                },
+                vectorOptions: {
+                  type: "cosine",
+                  dimensions: 1536, // OpenAI embedding dimensions
+                  similarity: "cosine",
+                },
+              },
+            ],
+          })
+
+          console.log("Vector search index created successfully")
+        } catch (indexError) {
+          console.warn(
+            "Could not create vector index programmatically:",
+            indexError
+          )
+          console.warn(
+            "If using MongoDB Atlas, please create the vector search index manually in the Atlas UI"
+          )
+        }
+      } else {
+        console.log("Vector search index already exists")
       }
     } catch (error) {
-      console.error("Error creating vector search index:", error)
+      console.error("Error checking/creating vector search index:", error)
     }
   }
 }

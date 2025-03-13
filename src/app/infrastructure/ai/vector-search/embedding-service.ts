@@ -14,8 +14,11 @@ export class EmbeddingService {
   async generateEmbedding(text: string): Promise<number[]> {
     try {
       if (!this.apiKey) {
+        console.error("OpenAI API key is not configured")
         throw new Error("OpenAI API key is not configured")
       }
+
+      console.log(`Generating embedding for text: ${text.substring(0, 50)}...`)
 
       const response = await fetch("https://api.openai.com/v1/embeddings", {
         method: "POST",
@@ -31,16 +34,20 @@ export class EmbeddingService {
 
       if (!response.ok) {
         const error = await response.json()
+        console.error("OpenAI API error response:", error)
         throw new Error(
           `OpenAI API error: ${error.error?.message || response.statusText}`
         )
       }
 
       const data = await response.json()
+      console.log(
+        `Successfully generated embedding with ${data.data[0].embedding.length} dimensions`
+      )
       return data.data[0].embedding
     } catch (error) {
       console.error("Error generating embedding:", error)
-      return Array(1536).fill(0)
+      throw error // Rethrow to handle properly instead of returning zeros
     }
   }
 }

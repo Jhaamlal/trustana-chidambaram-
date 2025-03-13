@@ -419,4 +419,24 @@ export class ProductRepository {
       description_embedding: doc.description_embedding as number[] | undefined,
     }
   }
+
+  async removeAttributeFromAllProducts(attributeName: string): Promise<void> {
+    try {
+      // Remove the attribute from all products without filtering
+      // This ensures the attribute is removed even if it's in use
+      console.log(`Removing attribute '${attributeName}' from all products`)
+
+      const result = await this.db.collection(this.collection).updateMany(
+        {}, // No filter
+        { $pull: { attr: { k: attributeName } } as any }
+      )
+
+      console.log(
+        `Removed attribute '${attributeName}' from ${result.modifiedCount} products`
+      )
+    } catch (error) {
+      console.error("Error removing attribute from products:", error)
+      throw error
+    }
+  }
 }

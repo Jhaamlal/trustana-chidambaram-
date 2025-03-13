@@ -25,11 +25,16 @@ export async function processExcelFile(
 
     // Transform Excel records to product objects
     const products: Omit<Product, "_id">[] = records.map((record: any) => {
+      // Get the barcode value from various possible field names
+      const barcodeValue =
+        record.barcode || record.sku || record.product_code || ""
+
       // Extract basic product information
       const product: Omit<Product, "_id"> = {
         name: record.name || record.product_name || record.title || "",
         brand: record.brand || "",
-        barcode: record.barcode || record.sku || record.product_code || "",
+        // Only set barcode if it's not an empty string
+        ...(barcodeValue.trim() !== "" ? { barcode: barcodeValue.trim() } : {}),
         images: [],
         importedAt: new Date(), // Set import date to current time
         enriched: false, // New products start as not enriched

@@ -1,5 +1,7 @@
 import { Db, ObjectId, Document, WithId } from "mongodb"
 import { Attribute } from "@/app/types/attribute"
+import { ProductRepository } from "./product-repository"
+import { connectToDatabase } from "@/app/lib/mongodb"
 
 export class AttributeRepository {
   private db: Db
@@ -109,15 +111,44 @@ export class AttributeRepository {
     return this.mapToAttribute(result)
   }
 
-  async deleteAttribute(id: string): Promise<boolean> {
-    if (!ObjectId.isValid(id)) {
-      return false
-    }
+  async deleteAttribute(attributeId: string): Promise<void> {
+    try {
+      console.log(`Starting delete of attribute ID: ${attributeId}`)
 
-    const result = await this.db
-      .collection(this.collection)
-      .deleteOne({ _id: new ObjectId(id) })
-    return result.deletedCount === 1
+      // Get the attribute
+      const attribute = await this.getAttributeById(attributeId)
+      if (!attribute) {
+        console.log(`Attribute ID ${attributeId} not found`)
+        throw new Error("Attribute not found")
+      }
+
+      console.log(`Found attribute: ${attribute.name}`)
+
+      // Create product repository
+      const productRepository = new ProductRepository(this.db)
+
+      // First, remove the attribute from products
+      console.log(`Removing attribute ${attribute.name} from all products`)
+      await productRepository.removeAttributeFromAllProducts(attribute.name)
+      console.log(`Successfully removed attribute from products`)
+
+      // Then delete the attribute definition
+      console.log(`Deleting attribute definition for ${attribute.name}`)
+      const result = await this.db
+        .collection(this.collection)
+        .deleteOne({ _id: new ObjectId(attributeId) })
+
+      console.log(`Attribute deletion result: ${JSON.stringify(result)}`)
+
+      if (result.deletedCount === 0) {
+        throw new Error(`Failed to delete attribute ${attributeId}`)
+      }
+
+      console.log(`Successfully deleted attribute: ${attribute.name}`)
+    } catch (error) {
+      console.error("Error in deleteAttribute method:", error)
+      throw error
+    }
   }
 
   // Helper method to convert MongoDB document to Attribute type
@@ -137,4 +168,9 @@ export class AttributeRepository {
       updatedAt: doc.updatedAt as Date,
     }
   }
+}
+
+export async function createAttributeRepository(): Promise<AttributeRepository> {
+  const db = await connectToDatabase()
+  return new AttributeRepository(db)
 }
