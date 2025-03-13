@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import ProductList from "@/app/components/products/ProductList"
 import ProductFilters from "@/app/components/products/ProductFilters"
@@ -9,7 +9,7 @@ import { useProducts } from "@/app/hooks/useProducts"
 import { useAttributes } from "@/app/hooks/useAttributes"
 import { useProductSearch } from "@/app/hooks/useProductSearch"
 
-export default function ProductsPage() {
+function ProductsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const page = parseInt(searchParams.get("page") || "1")
@@ -158,5 +158,13 @@ export default function ProductsPage() {
         />
       </div>
     </div>
+  )
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProductsContent />
+    </Suspense>
   )
 }

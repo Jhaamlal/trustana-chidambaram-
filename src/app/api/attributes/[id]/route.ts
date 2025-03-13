@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { connectToDatabase } from "@/app/lib/mongodb"
 import {
   AttributeRepository,
@@ -8,12 +8,9 @@ import { ObjectId } from "mongodb"
 
 export const runtime = "nodejs"
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, context: any) {
   try {
-    const id = params.id
+    const id = context.params.id
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -44,12 +41,9 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, context: any) {
   try {
-    const id = params.id
+    const id = context.params.id
     const data = await request.json()
 
     if (!ObjectId.isValid(id)) {
@@ -87,15 +81,14 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  console.log(`API: Received DELETE request for attribute ID: ${params.id}`)
+export async function DELETE(request: Request, context: any) {
+  console.log(
+    `API: Received DELETE request for attribute ID: ${context.params.id}`
+  )
 
   try {
-    if (!params.id || !ObjectId.isValid(params.id)) {
-      console.log(`API: Invalid attribute ID format: ${params.id}`)
+    if (!context.params.id || !ObjectId.isValid(context.params.id)) {
+      console.log(`API: Invalid attribute ID format: ${context.params.id}`)
       return NextResponse.json(
         { error: "Invalid attribute ID format" },
         { status: 400 }
@@ -105,10 +98,10 @@ export async function DELETE(
     console.log(`API: Creating attribute repository`)
     const attributeRepository = await createAttributeRepository()
 
-    console.log(`API: Calling deleteAttribute for ID: ${params.id}`)
-    await attributeRepository.deleteAttribute(params.id)
+    console.log(`API: Calling deleteAttribute for ID: ${context.params.id}`)
+    await attributeRepository.deleteAttribute(context.params.id)
 
-    console.log(`API: Successfully deleted attribute ID: ${params.id}`)
+    console.log(`API: Successfully deleted attribute ID: ${context.params.id}`)
     return NextResponse.json({ success: true })
   } catch (error: any) {
     const errorMessage = error?.message || "Unknown error"

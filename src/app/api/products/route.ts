@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1")
     const limit = parseInt(searchParams.get("limit") || "10")
     const sortField = searchParams.get("sortField") || "name"
-    const sortOrder = searchParams.get("sortOrder") === "desc" ? -1 : 1
+    const sortOrder = searchParams.get("sortOrder") === "desc" ? "desc" : "asc"
     const filters = searchParams.get("filters")
       ? JSON.parse(searchParams.get("filters") || "{}")
       : {}

@@ -1,17 +1,16 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import AttributeForm from "@/app/components/attributes/AttributeForm"
 import { useAttributes } from "@/app/hooks/useAttributes"
 import { Attribute } from "@/app/types"
 
-export default function EditAttributePage({
-  params,
-}: {
-  params: { id: string }
-}) {
+// Use a simpler approach for client components
+export default function EditAttributePage() {
   const router = useRouter()
+  const params = useParams()
+  const id = params?.id as string
   const { getAttribute, updateAttribute } = useAttributes()
   const [attribute, setAttribute] = useState<Attribute | null>(null)
   const [loading, setLoading] = useState(true)
@@ -20,7 +19,7 @@ export default function EditAttributePage({
   useEffect(() => {
     const fetchAttribute = async () => {
       try {
-        const data = await getAttribute(params.id)
+        const data = await getAttribute(id)
         setAttribute(data)
       } catch (err) {
         setError("Failed to load attribute")
@@ -31,11 +30,11 @@ export default function EditAttributePage({
     }
 
     fetchAttribute()
-  }, [params.id, getAttribute])
+  }, [id, getAttribute])
 
   const handleSubmit = async (updatedAttribute: Omit<Attribute, "_id">) => {
     try {
-      await updateAttribute(params.id, updatedAttribute)
+      await updateAttribute(id, updatedAttribute)
       router.push("/attributes")
     } catch (err) {
       console.error("Error updating attribute:", err)

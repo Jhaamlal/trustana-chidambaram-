@@ -6,7 +6,7 @@ import { MongoDBVectorSearch } from "@/app/infrastructure/ai/vector-search/mongo
 
 export const runtime = "nodejs"
 
-export async function GET(_request: NextRequest) {
+export async function GET(_: NextRequest) {
   try {
     // Connect to database
     console.log("Connecting to database...")

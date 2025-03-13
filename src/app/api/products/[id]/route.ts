@@ -1,16 +1,13 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { connectToDatabase } from "@/app/lib/mongodb"
 import { ProductRepository } from "@/app/infrastructure/repositories/mongodb/product-repository"
 import { ObjectId } from "mongodb"
 
-export const runtime = "edge"
+export const runtime = "nodejs"
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, context: any) {
   try {
-    const id = params.id
+    const id = context.params.id
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid product ID" }, { status: 400 })
@@ -35,12 +32,9 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, context: any) {
   try {
-    const id = params.id
+    const id = context.params.id
     const data = await request.json()
 
     if (!ObjectId.isValid(id)) {
@@ -72,12 +66,9 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, context: any) {
   try {
-    const id = params.id
+    const id = context.params.id
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid product ID" }, { status: 400 })

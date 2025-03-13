@@ -14,6 +14,14 @@ const eslintConfig = [
   ...compat.config({
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
+      "react/no-unescaped-entities": ["error", { forbid: [">", "}"] }],
     },
   }),
 ]

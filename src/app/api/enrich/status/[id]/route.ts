@@ -1,15 +1,12 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { connectToDatabase } from "@/app/lib/mongodb"
 import { EnrichmentService } from "@/app/infrastructure/ai/enrichment-service"
 
 export const runtime = "nodejs"
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, context: any) {
   try {
-    const jobId = params.id
+    const jobId = context.params.id
 
     if (!jobId) {
       return NextResponse.json({ error: "Job ID is required" }, { status: 400 })

@@ -58,8 +58,8 @@ export default function Home() {
           <p className="text-gray-600 mb-4">
             Our AI enrichment engine can automatically populate product
             attributes using advanced machine learning techniques. Simply select
-            products from the product list and click the "Enrich" button to get
-            started.
+            products from the product list and click the &quot;Enrich&quot;
+            button to get started.
           </p>
           <Link href="/products" className="btn-primary inline-block">
             Enrich Products
