@@ -34,12 +34,17 @@ export default function EnrichmentButton({
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to start enrichment process")
+        const errorMessage =
+          data.message || data.error || "Failed to start enrichment process"
+        console.error("Enrichment API error:", errorMessage)
+        throw new Error(errorMessage)
       }
 
       // Show success message
       alert(
-        `Enrichment started for ${selectedProducts.length} products. Job ID: ${data.jobId}`
+        `Enrichment started for ${selectedProducts.length} product${
+          selectedProducts.length > 1 ? "s" : ""
+        }. Job ID: ${data.jobId}`
       )
 
       // Call the completion handler

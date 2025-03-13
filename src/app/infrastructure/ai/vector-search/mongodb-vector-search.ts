@@ -11,17 +11,34 @@ export class MongoDBVectorSearch {
 
   async findSimilarProducts(
     embedding: number[],
-    limit: number = 10
+    limit = 10
   ): Promise<Product[]> {
     try {
-      // Use MongoDB Atlas Vector Search
+      if (!embedding || embedding.length === 0) {
+        console.error("Invalid embedding provided for vector search")
+        return this.findSimilarProductsAlternative(limit)
+      }
+
+      console.log(
+        `Performing vector search with embedding of dimension ${embedding.length}`
+      )
+
+      // Check if the vectorSearchIndex exists before attempting to use it
+      const indexExists = await this.checkVectorIndexExists()
+      if (!indexExists) {
+        console.warn(
+          "Vector search index not found, falling back to alternative search"
+        )
+        return this.findSimilarProductsAlternative(limit)
+      }
+
       const pipeline = [
         {
           $vectorSearch: {
-            index: "product_vector_index",
-            path: "description_embedding",
+            index: "vector_index",
+            path: "embedding",
             queryVector: embedding,
-            numCandidates: 100,
+            numCandidates: limit * 10, // Request more candidates to improve quality
             limit: limit,
           },
         },
@@ -29,29 +46,94 @@ export class MongoDBVectorSearch {
           $project: {
             _id: 1,
             name: 1,
+            description: 1,
             brand: 1,
-            barcode: 1,
-            attr: 1,
+            category: 1,
+            attributes: 1,
             score: { $meta: "vectorSearchScore" },
           },
         },
       ]
 
-      console.log("Executing vector search pipeline")
-      const results = await this.db
+      const result = await this.db
         .collection(this.collection)
         .aggregate(pipeline)
         .toArray()
 
-      console.log(`Vector search found ${results.length} results`)
-      return results as unknown as Product[]
-    } catch (error) {
-      // Fallback to regular search if vector search is not available
-      console.error(
-        "Vector search error, falling back to regular search:",
-        error
-      )
+      if (!result || result.length === 0) {
+        console.warn(
+          "Vector search returned no results, falling back to alternative search"
+        )
+        return this.findSimilarProductsAlternative(limit)
+      }
 
+      console.log(`Found ${result.length} similar products using vector search`)
+      return result as unknown as Product[]
+    } catch (error) {
+      console.error("Vector search error:", error)
+      console.log("Falling back to alternative search method")
+      return this.findSimilarProductsAlternative(limit)
+    }
+  }
+
+  // Add a helper method to check if the vector index exists
+  private async checkVectorIndexExists(): Promise<boolean> {
+    try {
+      const indexes = await this.db
+        .collection(this.collection)
+        .listIndexes()
+        .toArray()
+      return indexes.some((index) => index.name === "vector_index")
+    } catch (error) {
+      console.error("Error checking vector index:", error)
+      return false
+    }
+  }
+
+  // Fallback method to find similar products when vector search is unavailable
+  private async findSimilarProductsAlternative(
+    limit: number
+  ): Promise<Product[]> {
+    console.log("Using alternative product search methods")
+
+    try {
+      // Extract product information from the embedding query (likely comes from product name/brand)
+      // First, try to find products with similar brands if we have that in our database
+      const productsWithBrand = await this.db
+        .collection(this.collection)
+        .find({
+          attr: { $exists: true, $not: { $size: 0 } },
+        })
+        .limit(limit)
+        .toArray()
+
+      if (productsWithBrand.length > 0) {
+        console.log(
+          `Found ${productsWithBrand.length} products with attributes`
+        )
+        return productsWithBrand as unknown as Product[]
+      }
+
+      // If no products with attributes found, get any products that at least have some attributes
+      const productsWithAttributes = await this.db
+        .collection(this.collection)
+        .find({
+          "attr.0": { $exists: true },
+        })
+        .limit(limit)
+        .toArray()
+
+      if (productsWithAttributes.length > 0) {
+        console.log(
+          `Found ${productsWithAttributes.length} products with at least one attribute`
+        )
+        return productsWithAttributes as unknown as Product[]
+      }
+
+      // Last resort: just get any products available
+      console.log(
+        "No products with attributes found, returning any available products"
+      )
       const products = await this.db
         .collection(this.collection)
         .find({})
@@ -59,6 +141,9 @@ export class MongoDBVectorSearch {
         .toArray()
 
       return products as unknown as Product[]
+    } catch (fallbackError) {
+      console.error("Even fallback search failed:", fallbackError)
+      return [] // Return empty array if all searches fail
     }
   }
 
@@ -75,7 +160,7 @@ export class MongoDBVectorSearch {
         { _id: new ObjectId(productId) },
         {
           $set: {
-            description_embedding: embedding,
+            embedding: embedding,
             vector_updated_at: new Date(),
           },
         }
@@ -92,7 +177,7 @@ export class MongoDBVectorSearch {
       // Check if index exists
       const indexes = await this.db.collection(this.collection).indexes()
       const hasVectorIndex = indexes.some(
-        (index) => index.name === "product_vector_index"
+        (index) => index.name === "vector_index"
       )
 
       if (!hasVectorIndex) {
@@ -106,9 +191,9 @@ export class MongoDBVectorSearch {
             createIndexes: this.collection,
             indexes: [
               {
-                name: "product_vector_index",
+                name: "vector_index",
                 key: {
-                  description_embedding: "vector",
+                  embedding: "vector",
                 },
                 vectorOptions: {
                   type: "cosine",

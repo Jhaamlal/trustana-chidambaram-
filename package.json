@@ -19,6 +19,7 @@
     "axios": "^1.8.2",
     "crypto-browserify": "^3.12.1",
     "csv-parse": "^5.6.0",
+    "dotenv": "^16.4.7",
     "formidable": "^3.5.2",
     "gcp-metadata": "^5.3.0",
     "kerberos": "^2.2.1",

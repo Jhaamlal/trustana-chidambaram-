@@ -19,6 +19,8 @@ export class EnrichmentService {
   private vectorSearch: MongoDBVectorSearch
   private embeddingService: EmbeddingService
   private ragChain: RAGChain
+  // Minimum confidence threshold for including attributes - lowered for more lenient filtering
+  private minConfidenceThreshold = 0.15
 
   constructor(db: Db) {
     this.db = db
@@ -72,29 +74,75 @@ export class EnrichmentService {
         progress: 0,
       })
 
+      // Log the start of the enrichment process
+      console.log(
+        `Starting enrichment job ${jobId} for ${products.length} products with ${attributesToEnrich.length} attributes`
+      )
+      console.log(
+        `Attributes to enrich: ${attributesToEnrich
+          .map((a) => a.name)
+          .join(", ")}`
+      )
+
       // Process each product
       let processedCount = 0
+      let successCount = 0
+      let skippedCount = 0
 
       for (const product of products) {
         try {
+          console.log(`Processing product: ${product.name} (${product._id})`)
+
+          // Check if product already has all the attributes
+          const existingAttrs = product.attr || []
+          const existingAttrNames = existingAttrs.map((attr) => attr.k)
+          const attributesToEnrichForProduct = attributesToEnrich.filter(
+            (attr) => !existingAttrNames.includes(attr.name)
+          )
+
+          if (attributesToEnrichForProduct.length === 0) {
+            console.log(
+              `Skipping product ${product._id}: All attributes already exist`
+            )
+            skippedCount++
+            processedCount++
+            continue
+          }
+
           // Enrich the product
           const enrichedAttributes = await this.enrichProduct(
             product,
-            attributesToEnrich
+            attributesToEnrichForProduct
+          )
+
+          // Filter out low-confidence attributes
+          const filteredAttributes = enrichedAttributes.filter(
+            (attr) => (attr.confidence || 0) >= this.minConfidenceThreshold
+          )
+
+          console.log(
+            `Enriched ${filteredAttributes.length} attributes for product ${product._id} (filtered from ${enrichedAttributes.length})`
           )
 
           // Update the product with enriched attributes
-          await this.productRepository.updateProduct(product._id, {
-            attr: enrichedAttributes,
-            enriched: true,
-            enrichedAt: new Date(),
-          })
+          if (filteredAttributes.length > 0) {
+            await this.productRepository.updateProduct(product._id, {
+              attr: [...existingAttrs, ...filteredAttributes],
+              enriched: true,
+              enrichedAt: new Date(),
+            })
+            successCount++
+          } else {
+            console.log(
+              `No attributes with sufficient confidence for product ${product._id}`
+            )
+          }
 
           // Save enrichment result
           await this.enrichmentRepository.saveEnrichmentResult(jobId, {
             productId: product._id,
-            enrichedAttributes: enrichedAttributes.map((attr) => attr.k),
-            success: true,
+            enrichedAttributes: filteredAttributes.map((attr) => attr.k),
+            success: filteredAttributes.length > 0,
           })
 
           // Update job progress
@@ -127,7 +175,10 @@ export class EnrichmentService {
         }
       }
 
-      // Update job status to completed
+      // Update job status to completed with progress information
+      const completionMessage = `Successfully enriched ${successCount} products, skipped ${skippedCount} products that already had attributes`
+      console.log(`Enrichment job ${jobId} completed. ${completionMessage}`)
+
       await this.enrichmentRepository.updateEnrichmentJobStatus(jobId, {
         status: "completed",
         progress: 100,
@@ -160,12 +211,18 @@ export class EnrichmentService {
       embedding
     )
 
+    console.log(
+      `Found ${similarProducts.length} similar products for ${product.name}`
+    )
+
     // Generate attribute values using RAG
     const generatedAttributes = await this.ragChain.run({
       product,
       similarProducts,
       attributesToEnrich,
     })
+
+    console.log(`RAG chain generated ${generatedAttributes.length} attributes`)
 
     // Calculate confidence scores for each attribute
     const enrichedAttributes = generatedAttributes.map((attr) => {
@@ -175,12 +232,26 @@ export class EnrichmentService {
       // Calculate format validity
       const formatValidity = validateFormat(attributeDef.type, attr.v)
 
+      // Adjust source reliability based on available similar products
+      // Be more lenient when similar products are scarce
+      let sourceReliability = 0.8 // default
+      if (similarProducts.length === 0) {
+        sourceReliability = 0.5 // Increased from 0.4
+      } else if (similarProducts.length < 3) {
+        sourceReliability = 0.65 // Increased from 0.6
+      }
+
+      // Use the LLM-provided confidence directly if it's available and reasonable
+      const llmConfidence = attr.confidence
+        ? Math.max(0.3, attr.confidence)
+        : 0.7
+
       // Calculate confidence score
       const confidenceScore = calculateConfidence(attributeDef.type, attr.v, {
-        contextual_match: attr.confidence || 0.7,
+        contextual_match: Math.max(0.5, attr.confidence || 0.7), // Ensure minimum contextual match
         format_validity: formatValidity,
-        source_reliability: 0.8,
-        llm_confidence: attr.confidence || 0.7,
+        source_reliability: sourceReliability,
+        llm_confidence: llmConfidence,
       })
 
       return {
@@ -189,17 +260,13 @@ export class EnrichmentService {
       }
     })
 
-    // Combine with existing attributes
-    const existingAttributes = product.attr || []
-    // const existingKeys = existingAttributes.map((attr) => attr.k)
+    // For debugging purposes, log the confidence scores
+    console.log("Enriched attributes with confidence scores:")
+    enrichedAttributes.forEach((attr) => {
+      console.log(`  ${attr.k}: ${attr.confidence?.toFixed(2)}`)
+    })
 
-    const combinedAttributes = [
-      ...existingAttributes.filter(
-        (attr) => !enrichedAttributes.some((ea) => ea.k === attr.k)
-      ),
-      ...enrichedAttributes,
-    ]
-
-    return combinedAttributes
+    // Return only the enriched attributes (existing ones are handled in processEnrichmentJob)
+    return enrichedAttributes
   }
 }

@@ -1,16 +1,17 @@
 export class EmbeddingService {
   private apiKey: string
   private model: string
+  private fallbackModel: string
   private db: any
 
   constructor(db: any) {
     this.apiKey = process.env.OPENAI_API_KEY || ""
     this.model = "text-embedding-3-small"
+    this.fallbackModel = "text-embedding-ada-002"
     this.db = db
   }
 
-  // Here we are passing the ,data create vector embedding ,using OPEN AI, it will
-  // take some time, I can have used some trigger not to that need not to refresh ,but will do BAAD ME
+  // Here we are passing the data create vector embedding using OpenAI
   async generateEmbedding(text: string): Promise<number[]> {
     try {
       if (!this.apiKey) {
@@ -20,35 +21,52 @@ export class EmbeddingService {
 
       console.log(`Generating embedding for text: ${text.substring(0, 50)}...`)
 
-      const response = await fetch("https://api.openai.com/v1/embeddings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: this.model,
-          input: text,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        console.error("OpenAI API error response:", error)
-        throw new Error(
-          `OpenAI API error: ${error.error?.message || response.statusText}`
+      // Try with the primary model first
+      try {
+        return await this.fetchEmbedding(this.model, text)
+      } catch (primaryModelError: any) {
+        // If the primary model fails, try the fallback model
+        console.warn(
+          `Error with primary embedding model: ${primaryModelError.message}, trying fallback model`
         )
+        return await this.fetchEmbedding(this.fallbackModel, text)
       }
-
-      const data = await response.json()
-      console.log(
-        `Successfully generated embedding with ${data.data[0].embedding.length} dimensions`
-      )
-      return data.data[0].embedding
     } catch (error) {
       console.error("Error generating embedding:", error)
-      throw error // Rethrow to handle properly instead of returning zeros
+      throw error
     }
+  }
+
+  private async fetchEmbedding(
+    modelName: string,
+    text: string
+  ): Promise<number[]> {
+    const response = await fetch("https://api.openai.com/v1/embeddings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: modelName,
+        input: text,
+        dimensions: 1536, // Explicitly request 1536 dimensions for compatibility
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      console.error(`OpenAI API error response for model ${modelName}:`, error)
+      throw new Error(
+        `OpenAI API error: ${error.error?.message || response.statusText}`
+      )
+    }
+
+    const data = await response.json()
+    console.log(
+      `Successfully generated embedding with ${data.data[0].embedding.length} dimensions using model ${modelName}`
+    )
+    return data.data[0].embedding
   }
 }
 
